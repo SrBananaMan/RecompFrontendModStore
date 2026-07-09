@@ -99,8 +99,41 @@ target_include_directories(recompui PUBLIC
 build_vertex_shader(recompui "shaders/InterfaceVS.hlsl" "shaders/InterfaceVS.hlsl")
 build_pixel_shader(recompui "shaders/InterfacePS.hlsl" "shaders/InterfacePS.hlsl")
 
-# Find curl package from vcpkg
-find_package(CURL REQUIRED)
+# Provide libcurl without relying on vcpkg or any other package manager.
+if (WIN32)
+    # Build libcurl from source as part of this project. Uses the OS-native
+    # Schannel TLS backend, so no external SSL library is required either.
+    include(FetchContent)
+
+    if (DEFINED ENV{CURL_VERSION})
+        set(CURL_VERSION $ENV{CURL_VERSION})
+    else()
+        set(CURL_VERSION "8.11.1")
+    endif()
+
+    string(REPLACE "." "_" CURL_TAG_VERSION "${CURL_VERSION}")
+
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
+    set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(BUILD_LIBCURL_DOCS OFF CACHE BOOL "" FORCE)
+    set(BUILD_MISC_DOCS OFF CACHE BOOL "" FORCE)
+    set(ENABLE_CURL_MANUAL OFF CACHE BOOL "" FORCE)
+    set(CURL_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+    set(HTTP_ONLY ON CACHE BOOL "" FORCE)
+    set(CURL_USE_SCHANNEL ON CACHE BOOL "" FORCE)
+    set(CURL_USE_OPENSSL OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        curl
+        URL https://github.com/curl/curl/archive/refs/tags/curl-${CURL_TAG_VERSION}.tar.gz
+    )
+    FetchContent_MakeAvailable(curl)
+else()
+    # Find curl via the system package manager (e.g. `apt install libcurl4-openssl-dev`).
+    find_package(CURL REQUIRED)
+endif()
 
 target_include_directories(recompui PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include/recompui")
 
